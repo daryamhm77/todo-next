@@ -1,21 +1,33 @@
+import { Suspense } from "react";
 import NextAuthProvider from "@/providers/NextAuthProvider";
-import Layout from "@/layout/Layout";
-import { yekan } from "@/utils/fonts";
+import AppShell from "@/layout/AppShell";
+import ShellFallback from "@/layout/ShellFallback";
+import { displayFont } from "@/utils/fonts";
+import { getSession } from "@/utils/session";
 import "./globals.css";
 
 export const metadata = {
-  title: "املاک | پروژه بوتواستارت",
-  description: "سایت خرید و فروش املاک",
-  icons: { icon: "./favicon.ico" },
+  title: "To-Do List",
+  description: "A simple to-do list",
 };
+
+async function AuthenticatedApp({ children }) {
+  const session = await getSession();
+
+  return (
+    <NextAuthProvider session={session}>
+      <AppShell>{children}</AppShell>
+    </NextAuthProvider>
+  );
+}
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fa" dir="rtl">
-      <body className={yekan.className}>
-        <NextAuthProvider>
-          <Layout>{children}</Layout>
-        </NextAuthProvider>
+    <html lang="en">
+      <body className={displayFont.className}>
+        <Suspense fallback={<ShellFallback />}>
+          <AuthenticatedApp>{children}</AuthenticatedApp>
+        </Suspense>
       </body>
     </html>
   );

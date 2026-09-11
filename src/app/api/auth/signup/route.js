@@ -7,45 +7,48 @@ export async function POST(req) {
   try {
     await connectDB();
 
-    const { email, password } = await req.json();
-    console.log({ email, password });
+    const body = await req.json();
+    const email = body.email?.trim().toLowerCase();
+    const password = body.password;
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "لطفا اطلاعات معتبر وارد کنید" },
+        { error: "Please enter a valid email and password" },
+        { status: 422 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
         { status: 422 }
       );
     }
 
     const existingUser = await User.findOne({ email });
-    console.log(existingUser);
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "این حساب کاربری وجود دارد" },
+        { error: "An account with this email already exists" },
         { status: 422 }
       );
     }
 
-    const hashedPassword = await hashPassword(password);
-
-    const newUser = await User.create({
-      email: email,
-      password: hashedPassword,
+    await User.create({
+      email,
+      password: await hashPassword(password),
     });
-    console.log(newUser);
 
     return NextResponse.json(
-      { message: "حساب کاربری ایجاد شد" },
+      { status: "success", message: "Account created" },
       { status: 201 }
     );
   } catch (err) {
-    console.log(err);
-    return NextResponse.json(
-      { error: "مشکلی در سرور رخ داده است" },
-      {
-        status: 500,
-      }
-    );
+    const details = err?.message || "";
+    console.error("Signup failed:", details);
+    const error = /mongo|database/i.test(details)
+      ? "Could not connect to the database. Check MONGO_URI."
+      : "Could not create account. Please try again";
+    return NextResponse.json({ error }, { status: 500 });
   }
 }

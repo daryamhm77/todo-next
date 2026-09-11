@@ -1,19 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import Loader from "@/module/Loader";
-import styles from "@/template/SignupPage.module.css";
+import PasswordField from "@/module/PasswordField";
 
 function SigninPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const router = useRouter();
 
   const signinHandler = async (e) => {
     e.preventDefault();
@@ -25,42 +23,46 @@ function SigninPage() {
     });
     setLoading(false);
     if (res.error) {
-      toast.error(res.error);
-    } else {
-      router.push("/");
+      toast.error(
+        res.error === "CredentialsSignin"
+          ? "Incorrect email or password"
+          : res.error
+      );
+      return;
     }
+    toast.success("Signed in");
+    router.push("/");
+    router.refresh();
   };
 
   return (
-    <div className={styles.form}>
-      <h4>فرم ورود</h4>
-      <form>
-        <label>ایمیل:</label>
-        <input
-          type="text"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <label>رمز عبور:</label>
-        <input
-          type="password"
+    <form className="auth-wrap" onSubmit={signinHandler}>
+      <h2>Sign in</h2>
+      <div className="fields">
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <PasswordField
+          id="password"
+          label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {loading ? (
-          <Loader />
-        ) : (
-          <button type="submit" onClick={signinHandler}>
-            ثبت نام
-          </button>
-        )}
-      </form>
-      <p>
-        حساب کاربری ندارید؟
-        <Link href="/signup">ثبت نام</Link>
-      </p>
-      <Toaster />
-    </div>
+      </div>
+      {loading ? (
+        <Loader />
+      ) : (
+        <button className="btn" type="submit">
+          Sign in
+        </button>
+      )}
+    </form>
   );
 }
 

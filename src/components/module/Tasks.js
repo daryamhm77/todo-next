@@ -1,46 +1,82 @@
-import { RiMastodonLine } from "react-icons/ri";
-import { BiRightArrow, BiLeftArrow } from "react-icons/bi";
+"use client";
 
-function Tasks({ data, next, back, fetchTodos }) {
-  const changeStatus = async (id, status) => {
-    const res = await fetch("/api/todos", {
-      method: "PATCH",
-      body: JSON.stringify({ id, status }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const data = await res.json();
-    if (data.status === "success") fetchTodos();
-  };
+function CheckBox({ checked, onChange, label, disabled }) {
+  return (
+    <label className="check">
+      <input
+        className="check-box"
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        aria-label={label}
+      />
+    </label>
+  );
+}
+
+function formatDueDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function Tasks({
+  data,
+  onStatusChange,
+  emptyText = "No tasks yet. Add one to fill this list.",
+}) {
+  if (!data?.length) {
+    return <div className="empty-row">{emptyText}</div>;
+  }
 
   return (
-    <div className="tasks">
-      {data?.map((i) => (
-        <div key={i._id} className="tasks__card">
-          <span className={i.status}></span>
-          <RiMastodonLine />
-          <h4>{i.title}</h4>
-          <div>
-            {back ? (
-              <button
-                className="button-back"
-                onClick={() => changeStatus(i._id, back)}
-              >
-                <BiLeftArrow />
-                Back
-              </button>
-            ) : null}
-            {next ? (
-              <button
-                className="button-next"
-                onClick={() => changeStatus(i._id, next)}
-              >
-                Next
-                <BiRightArrow />
-              </button>
-            ) : null}
+    <div className="task-list">
+      {data.map((todo) => {
+        const priority = (todo.priority || "medium").toLowerCase();
+        const inProgress =
+          todo.status === "inProgress" ||
+          todo.status === "review" ||
+          todo.status === "done";
+        const done = todo.status === "done";
+        const canEdit = typeof onStatusChange === "function";
+
+        return (
+          <div key={todo._id} className="task-row">
+            <div className="due">{formatDueDate(todo.dueDate)}</div>
+            <div className="task-body">
+              <div className="priority">
+                <span className={`dot ${priority}`} />
+                {priority}
+              </div>
+              <div className="what">{todo.title}</div>
+              <div className="who">{todo.who || "—"}</div>
+              <CheckBox
+                label="In progress"
+                checked={inProgress}
+                disabled={!canEdit}
+                onChange={() =>
+                  onStatusChange(
+                    todo._id,
+                    todo.status === "inProgress" || todo.status === "review"
+                      ? "todo"
+                      : "inProgress"
+                  )
+                }
+              />
+              <CheckBox
+                label="Done"
+                checked={done}
+                disabled={!canEdit}
+                onChange={() =>
+                  onStatusChange(todo._id, done ? "inProgress" : "done")
+                }
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

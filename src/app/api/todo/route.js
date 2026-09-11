@@ -1,127 +1,86 @@
-import User from "@/models/User";
-import connectDB from "@/utils/connectDB";
-import { sortTodos } from "@/utils/sortTodos";
-import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { getCurrentUserDoc } from "@/utils/user";
+import { serializeTodos } from "@/utils/todos";
 
 export async function POST(req) {
-    try {
-        await connectDB();
-        const session = await getServerSession(req);
-        if (!session) {
-            return NextResponse.json(
-        {
-          error: "Please Log in",
-        },
-        { status: 401 }
-      );
-  }
+  try {
+    const { user, error } = await getCurrentUserDoc();
+    if (error) return error;
 
-  const user = await User.findOne({ email: session.user.email });
-  if (!user) {
-     return NextResponse.json(
-        { error: "User Not Found❌" },
-        { status: 404 }
-      );
-  }
-   const { title, status } = req.json();
+    const { title, status = "todo", who = "", dueDate = "", priority = "medium" } =
+      await req.json();
 
-    if (!title || !status) {
-       return NextResponse.json(
-        { error: "Invalid Data❌" },
-        { status: 400 }
-      );
+    if (!title) {
+      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    user.todos.push({ title, status });
-    user.save();
+    user.todos.push({ title, status, who, dueDate, priority });
+    await user.save();
 
-     return NextResponse.json(
-      { message: "Todo Created👍" },
+    return NextResponse.json(
+      {
+        status: "success",
+        message: "Todo created",
+        data: { todos: serializeTodos(user.todos) },
+      },
       { status: 201 }
     );
-    } catch (error) {
-         return NextResponse.json(
-      { error: "Server Error" },
-      { status: 500 }
-    );
-    }
+  } catch (error) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
 
-export async function GET(req) {
-    try {
-         await connectDB();
-        const session = await getServerSession(req);
-        if (!session) {
-            return NextResponse.json(
-        {
-          error: "Please Log in",
-        },
-        { status: 401 }
-      );
-  }
+export async function GET() {
+  try {
+    const { user, error } = await getCurrentUserDoc();
+    if (error) return error;
 
-  const user = await User.findOne({ email: session.user.email });
-  if (!user) {
-     return NextResponse.json(
-        { error: "User Not Found❌" },
-        { status: 404 }
-      );
-  }
-  const sortedData = sortTodos(user.todos);
-   return NextResponse.json(
+    return NextResponse.json(
       {
-         data: { todos: sortedData },
+        status: "success",
+        data: { todos: serializeTodos(user.todos), notes: user.notes || "" },
       },
       { status: 200 }
     );
-    } catch (error) {
-         return NextResponse.json(
-      { error: "Server Error" },
-      { status: 500 }
-    );
-    }
+  } catch (error) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
+
 export async function PATCH(req) {
-    try {
-         await connectDB();
-        const session = await getServerSession(req);
-        if (!session) {
-            return NextResponse.json(
-        {
-          error: "Please Log in",
-        },
-        { status: 401 }
-      );
-  }
+  try {
+    const { user, error } = await getCurrentUserDoc();
+    if (error) return error;
 
-  const user = await User.findOne({ email: session.user.email });
-  if (!user) {
-     return NextResponse.json(
-        { error: "User Not Found❌" },
-        { status: 404 }
-      );
-  }
-  const { id, status } = req.json();
+    const body = await req.json();
 
+    if (typeof body.notes === "string" && !body.id) {
+      user.notes = body.notes;
+      await user.save();
+      return NextResponse.json(
+        { status: "success", data: { notes: user.notes } },
+        { status: 200 }
+      );
+    }
+
+    const { id, status } = body;
     if (!id || !status) {
-     return NextResponse.json(
-        { error: "Invalid Data❌" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    const result = await User.updateOne(
-      { "todos._id": id },
-      { $set: { "todos.$.status": status } }
-    );
-    console.log(result);
-    return NextResponse.json(
-      { message: "Todo Updated👍" },
-      { status: 200 })
-    } catch (error) {
-         return NextResponse.json(
-      { error: "Server Error" },
-      { status: 500 }
-    );
+    const todo = user.todos.id(id);
+    if (!todo) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
+
+    todo.status = status;
+    await user.save();
+
+    return NextResponse.json(
+      { status: "success", message: "Todo updated" },
+      { status: 200 }
+    );
+  } catch (error) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

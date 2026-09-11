@@ -1,85 +1,110 @@
+"use client";
+
 import { useState } from "react";
-import RadioButton from "../element/RadioButton";
-import { GrAddCircle } from "react-icons/gr";
-import { BsAlignStart } from "react-icons/bs";
-import { FiSettings } from "react-icons/fi";
-import { AiOutlineFileSearch } from "react-icons/ai";
-import { MdDoneAll } from "react-icons/md";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
-function AddTodoPage() {
+function AddTodoPage({ date = "" }) {
+  const router = useRouter();
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState("todo");
+  const [who, setWho] = useState("");
+  const [dueDate, setDueDate] = useState(date);
+  const [priority, setPriority] = useState("medium");
+  const [loading, setLoading] = useState(false);
 
-  const addHandler = async () => {
-    const res = await fetch("/api/todos", {
+  const addHandler = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Add a task name.");
+      return;
+    }
+
+    setLoading(true);
+    const res = await fetch("/api/todo", {
       method: "POST",
-      body: JSON.stringify({ title, status }),
+      body: JSON.stringify({
+        title: title.trim(),
+        who: who.trim(),
+        dueDate,
+        priority,
+        status: "todo",
+      }),
       headers: { "Content-Type": "application/json" },
     });
     const data = await res.json();
+    setLoading(false);
+
     if (data.status === "success") {
+      toast.success("Task added");
       setTitle("");
-      setStatus("todo");
-      toast.success("Todo added!");
+      setWho("");
+      setDueDate("");
+      setPriority("medium");
+      router.push(date ? "/calendar" : "/");
+      router.refresh();
+    } else {
+      toast.error(data.error || "Could not add task");
     }
   };
 
   return (
-    <div className="add-form">
-      <h2>
-        <GrAddCircle />
-        Add New Todo
-      </h2>
-      <div className="add-form__input">
-        <div className="add-form__input--first">
-          <label htmlFor="title">Title:</label>
+    <form className="add-form" onSubmit={addHandler}>
+      <h2>Add task</h2>
+      <div className="fields">
+        <div className="field">
+          <label htmlFor="title">What</label>
           <input
             id="title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            placeholder="Renew vehicle registration"
           />
         </div>
-        <div className="add-form__input--second">
-          <RadioButton
-            status={status}
-            setStatus={setStatus}
-            value="todo"
-            title="Todo"
-          >
-            <BsAlignStart />
-          </RadioButton>
-          <RadioButton
-            status={status}
-            setStatus={setStatus}
-            value="inProgress"
-            title="In Progress"
-          >
-            <FiSettings />
-          </RadioButton>
-          <RadioButton
-            status={status}
-            setStatus={setStatus}
-            value="review"
-            title="Review"
-          >
-            <AiOutlineFileSearch />
-          </RadioButton>
-          <RadioButton
-            status={status}
-            setStatus={setStatus}
-            value="done"
-            title="Done"
-          >
-            <MdDoneAll />
-          </RadioButton>
+        <div className="field">
+          <label htmlFor="who">Who</label>
+          <input
+            id="who"
+            type="text"
+            value={who}
+            onChange={(e) => setWho(e.target.value)}
+            placeholder="DMV"
+          />
         </div>
-        <button onClick={addHandler}>Add</button>
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="dueDate">Due date</label>
+            <input
+              id="dueDate"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Priority</label>
+            <div className="priority-options">
+              {["high", "medium", "low"].map((value) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="priority"
+                    value={value}
+                    checked={priority === value}
+                    onChange={(e) => setPriority(e.target.value)}
+                  />
+                  <span className={`dot ${value}`} />
+                  {value}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-      <ToastContainer />
-    </div>
+      <button className="btn" type="submit" disabled={loading}>
+        {loading ? "Adding..." : "Add task"}
+      </button>
+    </form>
   );
 }
 

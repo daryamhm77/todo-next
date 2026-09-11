@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: todo-next-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-milad}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:-12345}
+      MONGO_INITDB_DATABASE: todolist
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--username",
+          "${MONGO_USER:-milad}",
+          "--password",
+          "${MONGO_PASS:-12345}",
+          "--authenticationDatabase",
+          "admin",
+          "--quiet",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo_data:

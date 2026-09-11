@@ -1,13 +1,9 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/api/auth/[...nextauth]/route";
 import SignupPage from "@/template/SignupPage";
+import { getSession } from "@/utils/session";
 
-async function Signup() {
-  const session = await getServerSession(authOptions);
+export default async function Signup() {
+  const session = await getSession();
   if (session) redirect("/");
-
   return <SignupPage />;
 }
-
-export default Signup;
