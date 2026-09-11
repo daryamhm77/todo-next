@@ -10,6 +10,9 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "mongoose": "^7.4.1",

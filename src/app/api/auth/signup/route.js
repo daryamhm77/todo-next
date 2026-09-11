@@ -47,7 +47,7 @@ export async function POST(req) {
     const details = err?.message || "";
     console.error("Signup failed:", details);
     const error = /mongo|database/i.test(details)
-      ? "Could not connect to the database. Check MONGO_URI."
+      ? "Could not connect to the database. Check MONGODB_URI."
       : "Could not create account. Please try again";
     return NextResponse.json({ error }, { status: 500 });
   }

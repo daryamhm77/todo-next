@@ -8,15 +8,33 @@ if (!globalMongoose._mongoose) {
   globalMongoose._mongoose = { conn: null, promise: null };
 }
 
-function getMongoUri() {
+function interpolate(uri) {
   const user = encodeURIComponent(process.env.MONGO_USER || "");
   const pass = encodeURIComponent(process.env.MONGO_PASS || "");
-  const raw = process.env.MONGO_URI || "";
-  return raw
+  return uri
     .replace("${MONGO_USER}", user)
     .replace("${MONGO_PASS}", pass)
     .replace("$MONGO_USER", user)
     .replace("$MONGO_PASS", pass);
+}
+
+function withDatabaseName(uri) {
+  const dbName = process.env.MONGODB_DB || process.env.MONGO_DB || "todolist";
+  try {
+    const parsed = new URL(uri);
+    if (!parsed.pathname || parsed.pathname === "/") {
+      parsed.pathname = `/${dbName}`;
+    }
+    return parsed.toString();
+  } catch {
+    return uri;
+  }
+}
+
+function getMongoUri() {
+  const raw = process.env.MONGODB_URI || process.env.MONGO_URI || "";
+  if (!raw) return "";
+  return withDatabaseName(interpolate(raw));
 }
 
 async function connectDB() {
@@ -41,7 +59,7 @@ async function connectDB() {
   } catch (error) {
     cached.promise = null;
     console.error("MongoDB connection failed:", error.message);
-    throw new Error("Could not connect to MongoDB. Check MONGO_URI.");
+    throw new Error("Could not connect to MongoDB. Check MONGODB_URI.");
   }
 }
 
